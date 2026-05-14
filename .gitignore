@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Sensitive data
+.env
+shopee-bot/cookies.json
+shopee-bot/items.json

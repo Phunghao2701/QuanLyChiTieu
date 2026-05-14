@@ -21,7 +21,12 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' or 'debt'
+  const [shopeeItems, setShopeeItems] = useState(() => {
+    const saved = localStorage.getItem('shopeeItems');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'debt', 'shopee'
 
   const [itemName, setItemName] = useState('');
   const [amountDisplay, setAmountDisplay] = useState(''); 
@@ -34,6 +39,11 @@ function App() {
   const [debtorName, setDebtorName] = useState('');
   const [debtAmountDisplay, setDebtAmountDisplay] = useState('');
   const [debtNote, setDebtNote] = useState('');
+
+  // Shopee Form States
+  const [shopeeUrl, setShopeeUrl] = useState('');
+  const [shopeeName, setShopeeName] = useState('');
+  const [shopeeTargetDisplay, setShopeeTargetDisplay] = useState('');
 
   // States for Editing
   const [editingId, setEditingId] = useState(null);
@@ -51,6 +61,10 @@ function App() {
   useEffect(() => {
     localStorage.setItem('debts', JSON.stringify(debts));
   }, [debts]);
+
+  useEffect(() => {
+    localStorage.setItem('shopeeItems', JSON.stringify(shopeeItems));
+  }, [shopeeItems]);
 
   const handleAmountChange = (e, setter) => {
     const value = e.target.value.replace(/\D/g, '');
@@ -99,6 +113,31 @@ function App() {
     setDebtorName('');
     setDebtAmountDisplay('');
     setDebtNote('');
+  };
+
+  const addShopeeItem = (e) => {
+    e.preventDefault();
+    const rawAmount = shopeeTargetDisplay.replace(/,/g, '');
+    if (!shopeeName || !rawAmount || !shopeeUrl) return;
+
+    const newItem = {
+      id: Date.now(),
+      name: shopeeName,
+      url: shopeeUrl,
+      targetPrice: Math.abs(parseFloat(rawAmount)),
+      currentPrice: null, // To be updated by the bot
+      status: 'tracking',
+      date: new Date().toISOString()
+    };
+
+    setShopeeItems([newItem, ...shopeeItems]);
+    setShopeeName('');
+    setShopeeUrl('');
+    setShopeeTargetDisplay('');
+  };
+
+  const deleteShopeeItem = (id) => {
+    setShopeeItems(shopeeItems.filter(item => item.id !== id));
   };
 
   const toggleDebtPaid = (id) => {
@@ -161,6 +200,7 @@ function App() {
   }, [debts]);
 
   const formatCurrency = (val, unit = 'đ') => {
+    if (val === null || val === undefined) return '---' + unit;
     const absVal = Math.abs(val);
     return new Intl.NumberFormat('vi-VN').format(absVal) + unit;
   };
@@ -234,14 +274,16 @@ function App() {
               <img src={logoPig} alt="Piggy Bank" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-4xl font-black tracking-tight drop-shadow-md">
-              {activeTab === 'dashboard' ? 'Quản lý dễ dàng' : 'Sổ Nợ Thông Minh'}
+              {activeTab === 'dashboard' ? 'Quản lý dễ dàng' : activeTab === 'debt' ? 'Sổ Nợ Thông Minh' : 'Săn Sale Shopee'}
             </h1>
           </div>
           <div className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-md px-6 py-2 rounded-full border border-white/30">
              <span className="text-xs font-black uppercase tracking-[0.2em]">
                {activeTab === 'dashboard' 
                 ? `Tháng ${currentDate.getMonth() + 1} / ${currentDate.getFullYear()}`
-                : `Đang có ${debts.filter(d => !d.paid).length} người nợ`
+                : activeTab === 'debt' 
+                ? `Đang có ${debts.filter(d => !d.paid).length} người nợ`
+                : `Đang theo dõi ${shopeeItems.length} món đồ`
                }
              </span>
           </div>
@@ -501,22 +543,152 @@ function App() {
             </aside>
           </div>
         )}
+
+        {/* Shopee Sale View */}
+        {activeTab === 'shopee' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <section className="lg:col-span-8 space-y-6">
+              <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 flex justify-between items-center bg-gradient-to-r from-white to-orange-50/30">
+                <div>
+                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Đang canh sale</p>
+                  <p className="text-orange-600 font-black text-5xl tabular-nums tracking-tighter">{shopeeItems.length} món</p>
+                </div>
+                <div className="w-20 h-20 bg-orange-500 rounded-[2rem] flex items-center justify-center text-white shadow-xl shadow-orange-500/30">
+                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-[3rem] shadow-xl p-10 border border-slate-100 min-h-[400px]">
+                <h3 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-4">
+                  <div className="w-3 h-10 bg-orange-500 rounded-full shadow-lg shadow-orange-500/30"></div>
+                  Danh Sách Săn Sale
+                </h3>
+                
+                {shopeeItems.length === 0 ? (
+                  <div className="py-20 text-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-100">
+                    <p className="text-xs font-black text-slate-300 uppercase tracking-[0.3em]">Chưa có món đồ nào</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-6">
+                    {shopeeItems.map(item => (
+                      <div key={item.id} className="p-8 rounded-[2.5rem] border border-slate-100 bg-white transition-all hover:shadow-xl group relative overflow-hidden">
+                        <div className="flex flex-col md:flex-row justify-between gap-6">
+                          <div className="flex items-center gap-6">
+                             <div className="w-20 h-20 bg-orange-50 rounded-[2rem] flex items-center justify-center text-3xl shadow-inner shrink-0 text-orange-500">
+                               🛍️
+                             </div>
+                             <div>
+                               <p className="text-xl font-black text-slate-800 mb-1 leading-tight">{item.name}</p>
+                               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-4">Ngày thêm: {new Date(item.date).toLocaleDateString('vi-VN')}</p>
+                               <div className="flex gap-2">
+                                  <a 
+                                    href={item.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="px-6 py-2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-orange-500 transition-all shadow-lg shadow-black/10"
+                                  >
+                                    Xem trên Shopee
+                                  </a>
+                               </div>
+                             </div>
+                          </div>
+                          
+                          <div className="flex flex-row md:flex-col justify-between items-end gap-2 shrink-0">
+                             <div className="text-right">
+                               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Giá mục tiêu</p>
+                               <p className="text-2xl font-black text-emerald-600 tabular-nums">{formatCurrency(item.targetPrice)}</p>
+                             </div>
+                             <div className="text-right">
+                               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Giá hiện tại</p>
+                               <p className="text-2xl font-black text-slate-300 tabular-nums italic">Đang cập nhật...</p>
+                             </div>
+                          </div>
+                        </div>
+                        
+                        <button 
+                          onClick={() => deleteShopeeItem(item.id)}
+                          className="absolute top-4 right-4 p-3 text-slate-200 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            <aside className="lg:col-span-4">
+              <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 sticky top-12">
+                <div className="flex items-center gap-4 mb-10">
+                  <div className="w-2 h-10 bg-orange-500 rounded-full"></div>
+                  <h3 className="text-2xl font-black text-slate-800 tracking-tight">Thêm Món Cần Săn</h3>
+                </div>
+                <form onSubmit={addShopeeItem} className="space-y-8">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-2">Tên món đồ</label>
+                    <input
+                      type="text"
+                      value={shopeeName}
+                      onChange={(e) => setShopeeName(e.target.value)}
+                      placeholder="VD: Tai nghe Sony, Chuột Logitech..."
+                      className="w-full bg-slate-50 border-2 border-transparent rounded-[2rem] px-8 py-5 focus:outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-black shadow-inner"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-2">Link sản phẩm (Shopee)</label>
+                    <input
+                      type="text"
+                      value={shopeeUrl}
+                      onChange={(e) => setShopeeUrl(e.target.value)}
+                      placeholder="Dán link vào đây..."
+                      className="w-full bg-slate-50 border-2 border-transparent rounded-[2rem] px-8 py-5 focus:outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-black shadow-inner"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-2">Giá mục tiêu (VND)</label>
+                    <input
+                      type="text"
+                      value={shopeeTargetDisplay}
+                      onChange={(e) => handleAmountChange(e, setShopeeTargetDisplay)}
+                      placeholder="VD: 400,000"
+                      className="w-full bg-slate-50 border-2 border-transparent rounded-[2rem] px-8 py-5 focus:outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-black font-mono shadow-inner"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white font-black py-6 rounded-full shadow-2xl shadow-orange-500/40 transition-all active:scale-[0.96] text-xs uppercase tracking-[0.25em] mt-6"
+                  >
+                    Bắt đầu theo dõi
+                  </button>
+                </form>
+              </div>
+            </aside>
+          </div>
+        )}
       </main>
 
-      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/90 backdrop-blur-2xl px-3 py-2 rounded-full border border-white/10 shadow-2xl flex items-center gap-2">
+      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/90 backdrop-blur-2xl px-3 py-2 rounded-full border border-white/10 shadow-2xl flex items-center gap-1.5 md:gap-2">
         <button 
           onClick={() => setActiveTab('dashboard')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all ${activeTab === 'dashboard' ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/40 scale-105' : 'text-slate-500 hover:text-white'}`}
+          className={`flex items-center gap-2 px-4 md:px-6 py-2.5 rounded-full transition-all ${activeTab === 'dashboard' ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/40 scale-105' : 'text-slate-500 hover:text-white'}`}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-          <span className="text-[10px] font-black uppercase tracking-widest">Chi Tiêu</span>
+          <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">Chi Tiêu</span>
         </button>
         <button 
           onClick={() => setActiveTab('debt')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-full transition-all ${activeTab === 'debt' ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/40 scale-105' : 'text-slate-500 hover:text-white'}`}
+          className={`flex items-center gap-2 px-4 md:px-6 py-2.5 rounded-full transition-all ${activeTab === 'debt' ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/40 scale-105' : 'text-slate-500 hover:text-white'}`}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <span className="text-[10px] font-black uppercase tracking-widest">Sổ Nợ</span>
+          <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">Sổ Nợ</span>
+        </button>
+        <button 
+          onClick={() => setActiveTab('shopee')}
+          className={`flex items-center gap-2 px-4 md:px-6 py-2.5 rounded-full transition-all ${activeTab === 'shopee' ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/40 scale-105' : 'text-slate-500 hover:text-white'}`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+          <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">Săn Sale</span>
         </button>
       </nav>
 
