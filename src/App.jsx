@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import bgImg from './assets/bg_vivid.png'
+import logoPig from './assets/logo_pig.png'
 
 function App() {
   const [expenses, setExpenses] = useState(() => {
@@ -123,10 +123,15 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-slate-800 font-sans selection:bg-orange-500/20 pb-20">
-      {/* Header Banner */}
+      {/* Header Banner - With Pig Logo */}
       <header className="bg-[#ff8c00] pt-12 pb-24 px-6 relative overflow-hidden shadow-2xl">
         <div className="max-w-6xl mx-auto relative z-10 text-center text-white">
-          <h1 className="text-4xl font-black mb-2 tracking-tight drop-shadow-md">Dễ dàng quản lý</h1>
+          <div className="flex flex-col items-center justify-center gap-4 mb-2">
+            <div className="w-20 h-20 bg-white rounded-3xl p-3 shadow-2xl shadow-black/10 animate-bounce-slow">
+              <img src={logoPig} alt="Piggy Bank" className="w-full h-full object-contain" />
+            </div>
+            <h1 className="text-4xl font-black tracking-tight drop-shadow-md">Dễ dàng quản lý</h1>
+          </div>
           <div className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/30">
              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Tháng {currentDate.getMonth() + 1} / {currentDate.getFullYear()}</span>
           </div>
