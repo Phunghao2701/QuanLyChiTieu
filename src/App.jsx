@@ -395,7 +395,7 @@ function App() {
               <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 flex justify-between items-center bg-gradient-to-r from-white to-orange-50/30">
                 <div>
                   <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Tổng tiền mọi người nợ bạn</p>
-                  <p className="text-black-600 font-black text-5xl tabular-nums tracking-tighter">{formatCurrency(totalDebt)}</p>
+                  <p className="text-orange-600 font-black text-5xl tabular-nums tracking-tighter">{formatCurrency(totalDebt)}</p>
                 </div>
                 <div className="w-20 h-20 bg-orange-500 rounded-[2rem] flex items-center justify-center text-white shadow-xl shadow-orange-500/30">
                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -426,7 +426,7 @@ function App() {
                               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{new Date(debt.date).toLocaleDateString('vi-VN')}</p>
                             </div>
                           </div>
-                          <p className={`text-xl font-black tabular-nums tracking-tight ${debt.paid ? 'text-slate-400' : 'text-black-600'}`}>{formatCurrency(debt.amount)}</p>
+                          <p className={`text-xl font-black tabular-nums tracking-tight ${debt.paid ? 'text-slate-400' : 'text-orange-600'}`}>{formatCurrency(debt.amount)}</p>
                         </div>
                         
                         {debt.note && (
