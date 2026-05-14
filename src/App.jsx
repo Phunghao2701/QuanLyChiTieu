@@ -1,6 +1,15 @@
 import { useState, useEffect, useMemo } from 'react'
 import logoPig from './assets/logo_pig.png'
 
+const CATEGORIES = [
+  { id: 'food', name: 'Ăn uống', icon: '🍔', color: 'bg-orange-100 text-orange-600' },
+  { id: 'transport', name: 'Di chuyển', icon: '🚗', color: 'bg-blue-100 text-blue-600' },
+  { id: 'shopping', name: 'Mua sắm', icon: '🛍️', color: 'bg-purple-100 text-purple-600' },
+  { id: 'entertainment', name: 'Đi chơi', icon: '🛝', color: 'bg-pink-100 text-pink-600' },
+  { id: 'home', name: 'Nhà cửa', icon: '🏠', color: 'bg-emerald-100 text-emerald-600' },
+  { id: 'other', name: 'Khác', icon: '📦', color: 'bg-slate-100 text-slate-600' },
+];
+
 function App() {
   const [expenses, setExpenses] = useState(() => {
     const saved = localStorage.getItem('expenses');
@@ -9,6 +18,7 @@ function App() {
 
   const [itemName, setItemName] = useState('');
   const [amountDisplay, setAmountDisplay] = useState(''); 
+  const [selectedCategory, setSelectedCategory] = useState('other');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -17,6 +27,10 @@ function App() {
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
   const [editAmountDisplay, setEditAmountDisplay] = useState('');
+  const [editCategory, setEditCategory] = useState('other');
+
+  // State for expanded categories in Modal
+  const [expandedCategories, setExpandedCategories] = useState({});
 
   useEffect(() => {
     localStorage.setItem('expenses', JSON.stringify(expenses));
@@ -41,12 +55,14 @@ function App() {
       id: Date.now(),
       name: itemName,
       amount: Math.abs(parseFloat(rawAmount)), 
+      category: selectedCategory,
       date: new Date().toISOString()
     };
 
     setExpenses([newExpense, ...expenses]);
     setItemName('');
     setAmountDisplay('');
+    setSelectedCategory('other');
   };
 
   const deleteExpense = (id) => {
@@ -57,6 +73,7 @@ function App() {
     setEditingId(exp.id);
     setEditName(exp.name);
     setEditAmountDisplay(new Intl.NumberFormat('en-US').format(exp.amount));
+    setEditCategory(exp.category || 'other');
   };
 
   const cancelEdit = () => {
@@ -71,7 +88,7 @@ function App() {
 
     setExpenses(expenses.map(exp => 
       exp.id === id 
-        ? { ...exp, name: editName, amount: Math.abs(parseFloat(rawAmount)) }
+        ? { ...exp, name: editName, amount: Math.abs(parseFloat(rawAmount)), category: editCategory }
         : exp
     ));
     setEditingId(null);
@@ -80,12 +97,10 @@ function App() {
   const totals = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
     const dayOfWeek = now.getDay();
     const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
     const startOfWeek = new Date(new Date().setDate(diff));
     startOfWeek.setHours(0, 0, 0, 0);
-
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     return expenses.reduce((acc, exp) => {
@@ -102,22 +117,16 @@ function App() {
     return new Intl.NumberFormat('vi-VN').format(absVal) + unit;
   };
 
-  // Calendar Logic
   const calendarData = useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    
     const daysInMonth = lastDay.getDate();
     let startDay = firstDay.getDay(); 
     if (startDay === 0) startDay = 7; 
-    
     const days = [];
-    for (let i = 1; i < startDay; i++) {
-      days.push({ day: null });
-    }
-    
+    for (let i = 1; i < startDay; i++) days.push({ day: null });
     for (let i = 1; i <= daysInMonth; i++) {
       const date = new Date(year, month, i);
       const totalOnDay = expenses.reduce((acc, exp) => {
@@ -129,35 +138,47 @@ function App() {
       }, 0);
       days.push({ day: i, total: totalOnDay, date });
     }
-    
     return days;
   }, [currentDate, expenses]);
 
-  // Details for selected date
-  const selectedDetails = useMemo(() => {
-    return expenses.filter(exp => {
+  const groupedSelectedDetails = useMemo(() => {
+    const dailyExpenses = expenses.filter(exp => {
       const expDate = new Date(exp.date);
       return (
         expDate.getFullYear() === selectedDate.getFullYear() &&
         expDate.getMonth() === selectedDate.getMonth() &&
         expDate.getDate() === selectedDate.getDate()
       );
-    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    });
+
+    const groups = {};
+    dailyExpenses.forEach(exp => {
+      const cat = exp.category || 'other';
+      if (!groups[cat]) groups[cat] = { total: 0, items: [] };
+      groups[cat].total += exp.amount;
+      groups[cat].items.push(exp);
+    });
+
+    return groups;
   }, [selectedDate, expenses]);
 
   const totalOnSelectedDate = useMemo(() => {
-    return selectedDetails.reduce((acc, exp) => acc + exp.amount, 0);
-  }, [selectedDetails]);
+    return Object.values(groupedSelectedDetails).reduce((acc, g) => acc + g.total, 0);
+  }, [groupedSelectedDetails]);
+
+  const toggleCategory = (catId) => {
+    setExpandedCategories(prev => ({ ...prev, [catId]: !prev[catId] }));
+  };
 
   const openDetails = (date) => {
     setSelectedDate(date);
     setIsModalOpen(true);
     setEditingId(null);
+    setExpandedCategories({});
   };
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-slate-800 font-sans selection:bg-orange-500/20 pb-20">
-      {/* Header Banner - With Pig Logo */}
       <header className="bg-[#ff8c00] pt-12 pb-24 px-6 relative overflow-hidden shadow-2xl">
         <div className="max-w-6xl mx-auto relative z-10 text-center text-white">
           <div className="flex flex-col items-center justify-center gap-4 mb-2">
@@ -176,7 +197,6 @@ function App() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 -mt-12 relative z-20">
-        {/* Summary Row */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white p-8 rounded-[3rem] shadow-[0_15px_40px_rgba(0,0,0,0.04)] text-center border-t-[10px] border-indigo-500">
             <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-2">Tổng hôm nay</p>
@@ -193,7 +213,6 @@ function App() {
         </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          {/* Calendar Section */}
           <section className="lg:col-span-8">
             <div className="bg-white rounded-[3rem] shadow-xl p-10 border border-slate-100">
               <div className="flex justify-between items-center mb-10 px-2">
@@ -218,10 +237,9 @@ function App() {
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-4">
+              <div className="grid grid-cols-7 gap-3">
                 {calendarData.map((d, idx) => {
                   const isToday = d.date && d.date.toDateString() === new Date().toDateString();
-                  
                   return (
                     <button 
                       key={idx} 
@@ -233,12 +251,12 @@ function App() {
                     >
                       {d.day && (
                         <>
-                          <span className={`text-xs font-black ${isToday ? 'text-orange-600' : 'text-slate-400 group-hover:text-orange-500'}`}>
+                          <span className={`text-xs font-black self-start ${isToday ? 'text-orange-600' : 'text-slate-300 group-hover:text-orange-400'}`}>
                             {d.day}
                           </span>
                           {d.total > 0 && (
-                            <div className="mt-1">
-                              <p className="text-[10px] font-black text-slate-800 tabular-nums leading-none">
+                            <div className="text-center">
+                              <p className="text-[10px] font-black text-slate-800 tabular-nums">
                                 {d.total >= 1000000 ? `${(d.total / 1000000).toFixed(1)}M` : `${(d.total / 1000).toFixed(0)}K`}
                               </p>
                               <div className="w-1.5 h-1.5 bg-orange-500 rounded-full mx-auto mt-1 shadow-sm shadow-orange-500/40"></div>
@@ -253,37 +271,56 @@ function App() {
             </div>
           </section>
 
-          {/* Right Column: Add Form */}
           <aside className="lg:col-span-4">
             <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 sticky top-12">
-              <div className="flex items-center gap-4 mb-10">
+              <div className="flex items-center gap-4 mb-8">
                 <div className="w-2 h-10 bg-indigo-500 rounded-full"></div>
                 <h3 className="text-2xl font-black text-slate-800 tracking-tight">Ghi Chép</h3>
               </div>
-              <form onSubmit={addExpense} className="space-y-8">
+              <form onSubmit={addExpense} className="space-y-6">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-2">Tên món đồ</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2">Tên món đồ</label>
                   <input
                     type="text"
                     value={itemName}
                     onChange={(e) => setItemName(e.target.value)}
                     placeholder="VD: Cà phê, Ăn trưa..."
-                    className="w-full bg-slate-50 border-2 border-transparent rounded-[2rem] px-8 py-5 focus:outline-none focus:border-orange-500 focus:bg-white transition-all placeholder:text-slate-300 text-sm font-bold shadow-inner"
+                    className="w-full bg-slate-50 border-2 border-transparent rounded-[2rem] px-8 py-5 focus:outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-bold shadow-inner"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-2">Số tiền (VND)</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2">Số tiền (VND)</label>
                   <input
                     type="text"
                     value={amountDisplay}
                     onChange={(e) => handleAmountChange(e, setAmountDisplay)}
                     placeholder="VD: 50,000"
-                    className="w-full bg-slate-50 border-2 border-transparent rounded-[2rem] px-8 py-5 focus:outline-none focus:border-orange-500 focus:bg-white transition-all placeholder:text-slate-300 text-sm font-black font-mono shadow-inner"
+                    className="w-full bg-slate-50 border-2 border-transparent rounded-[2rem] px-8 py-5 focus:outline-none focus:border-orange-500 focus:bg-white transition-all text-sm font-black font-mono shadow-inner"
                   />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 ml-2">Phân loại</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {CATEGORIES.map(cat => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setSelectedCategory(cat.id)}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl border-2 transition-all ${
+                          selectedCategory === cat.id 
+                            ? 'border-orange-500 bg-orange-50 scale-105' 
+                            : 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <span className="text-xl">{cat.icon}</span>
+                        <span className="text-[9px] font-black uppercase tracking-tighter">{cat.name}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white font-black py-6 rounded-full shadow-2xl shadow-orange-500/40 transition-all active:scale-[0.96] text-xs uppercase tracking-[0.25em] mt-6"
+                  className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white font-black py-6 rounded-full shadow-2xl shadow-orange-500/40 transition-all active:scale-[0.96] text-xs uppercase tracking-[0.25em] mt-4"
                 >
                   Ghi vào lịch
                 </button>
@@ -293,13 +330,11 @@ function App() {
         </div>
       </main>
 
-      {/* MODAL POPUP */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-xl animate-in fade-in duration-500" onClick={() => setIsModalOpen(false)}></div>
-          
-          <div className="relative z-10 w-full max-w-lg bg-white rounded-[4rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 border border-slate-100">
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-12 text-white relative">
+          <div className="relative z-10 w-full max-w-lg bg-white rounded-[4rem] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 border border-slate-100 flex flex-col max-h-[90vh]">
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-12 text-white relative shrink-0">
               <button onClick={() => setIsModalOpen(false)} className="absolute top-12 right-12 p-3 hover:bg-white/20 rounded-full transition-all border border-white/20">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
@@ -308,73 +343,100 @@ function App() {
               <p className="text-white/80 text-sm font-bold tabular-nums bg-black/10 inline-block px-4 py-1 rounded-full">Tổng cộng: {formatCurrency(totalOnSelectedDate, 'đ')}</p>
             </div>
 
-            <div className="p-10 max-h-[45vh] overflow-y-auto custom-scrollbar bg-slate-50/50">
-              {selectedDetails.length === 0 ? (
+            <div className="p-8 overflow-y-auto custom-scrollbar bg-slate-50/50 flex-grow">
+              {Object.keys(groupedSelectedDetails).length === 0 ? (
                 <div className="py-24 text-center bg-white rounded-[3rem] border-2 border-dashed border-slate-100 shadow-inner">
                    <p className="text-xs font-black text-slate-300 uppercase tracking-[0.3em]">Không có dữ liệu</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {selectedDetails.map(exp => (
-                    <div key={exp.id} className="bg-white p-7 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group overflow-hidden">
-                      {editingId === exp.id ? (
-                        <div className="space-y-5">
-                          <input
-                            type="text"
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="w-full bg-slate-50 border-2 border-orange-200 rounded-full px-6 py-3 focus:outline-none text-sm font-bold"
-                            placeholder="Tên món đồ"
-                          />
-                          <input
-                            type="text"
-                            value={editAmountDisplay}
-                            onChange={(e) => handleAmountChange(e, setEditAmountDisplay)}
-                            className="w-full bg-slate-50 border-2 border-orange-200 rounded-full px-6 py-3 focus:outline-none text-sm font-black font-mono"
-                            placeholder="Số tiền"
-                          />
-                          <div className="flex gap-4 pt-2">
-                            <button onClick={() => saveEdit(exp.id)} className="flex-1 bg-orange-500 text-white py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/30">Lưu</button>
-                            <button onClick={cancelEdit} className="flex-1 bg-slate-100 text-slate-400 py-3 rounded-full text-[10px] font-black uppercase tracking-widest">Hủy</button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-6">
-                            <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition-all shadow-inner">
-                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                <div className="space-y-6">
+                  {CATEGORIES.map(cat => {
+                    const group = groupedSelectedDetails[cat.id];
+                    if (!group) return null;
+                    const isExpanded = expandedCategories[cat.id];
+
+                    return (
+                      <div key={cat.id} className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden transition-all">
+                        <button 
+                          onClick={() => toggleCategory(cat.id)}
+                          className="w-full flex justify-between items-center p-6 hover:bg-slate-50/50 transition-all"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${cat.color} shadow-inner`}>
+                              {cat.icon}
                             </div>
-                            <div>
-                              <p className="text-lg font-black text-slate-800 leading-tight mb-1">{exp.name}</p>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 bg-slate-200 rounded-full"></span>
-                                {new Date(exp.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                              </p>
+                            <div className="text-left">
+                              <p className="text-base font-black text-slate-800">{cat.name}</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{group.items.length} món đồ</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-5">
-                            <span className="text-xl font-black tabular-nums text-slate-800">{formatCurrency(exp.amount, 'đ')}</span>
-                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                              <button onClick={() => startEdit(exp)} className="p-2.5 bg-indigo-50 text-indigo-500 rounded-full hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                              </button>
-                              <button onClick={() => deleteExpense(exp.id)} className="p-2.5 bg-red-50 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-sm">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                              </button>
-                            </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg font-black text-slate-800 tabular-nums">{formatCurrency(group.total, 'đ')}</span>
+                            <svg className={`w-5 h-5 text-slate-300 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7"></path>
+                            </svg>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                        </button>
+
+                        {isExpanded && (
+                          <div className="px-6 pb-6 pt-2 space-y-3 bg-slate-50/30">
+                            {group.items.map(exp => (
+                              <div key={exp.id} className="flex justify-between items-center bg-white p-5 rounded-2xl border border-slate-50 shadow-sm group">
+                                {editingId === exp.id ? (
+                                  <div className="w-full space-y-4 py-2">
+                                    <input
+                                      type="text"
+                                      value={editName}
+                                      onChange={(e) => setEditName(e.target.value)}
+                                      className="w-full bg-slate-50 border-2 border-orange-200 rounded-full px-5 py-2 focus:outline-none text-sm font-bold"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={editAmountDisplay}
+                                      onChange={(e) => handleAmountChange(e, setEditAmountDisplay)}
+                                      className="w-full bg-slate-50 border-2 border-orange-200 rounded-full px-5 py-2 focus:outline-none text-sm font-black font-mono"
+                                    />
+                                    <div className="flex gap-3">
+                                      <button onClick={() => saveEdit(exp.id)} className="flex-1 bg-orange-500 text-white py-2 rounded-full text-[10px] font-black uppercase tracking-widest">Lưu</button>
+                                      <button onClick={cancelEdit} className="flex-1 bg-slate-100 text-slate-400 py-2 rounded-full text-[10px] font-black uppercase tracking-widest">Hủy</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div>
+                                      <p className="text-sm font-black text-slate-800">{exp.name}</p>
+                                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                                        {new Date(exp.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                      <span className="text-base font-black tabular-nums text-slate-800">{formatCurrency(exp.amount, 'đ')}</span>
+                                      <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
+                                        <button onClick={() => startEdit(exp)} className="p-1.5 bg-indigo-50 text-indigo-500 rounded-lg hover:bg-indigo-500 hover:text-white transition-all">
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                        </button>
+                                        <button onClick={() => deleteExpense(exp.id)} className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all">
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
             
-            <div className="p-12 bg-white border-t border-slate-100 flex justify-end">
+            <div className="p-12 bg-white border-t border-slate-100 shrink-0 flex justify-end">
               <button 
                 onClick={() => setIsModalOpen(false)}
-                className="px-12 py-5 bg-slate-900 text-white text-xs font-black uppercase tracking-[0.2em] rounded-full shadow-2xl hover:bg-black hover:-translate-y-1 transition-all active:scale-95"
+                className="px-12 py-5 bg-slate-900 text-white text-xs font-black uppercase tracking-[0.2em] rounded-full shadow-2xl hover:bg-black hover:-translate-y-1 transition-all"
               >
                 Hoàn tất
               </button>
