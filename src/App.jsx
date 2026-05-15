@@ -547,7 +547,7 @@ function App() {
         )}
 
         {/* Shopee Sale View */}
-        {activeTab === 'shopee' && (
+        {import.meta.env.DEV && activeTab === 'shopee' && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
             <section className="lg:col-span-8 space-y-6">
               <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 flex justify-between items-center bg-gradient-to-r from-white to-orange-50/30">
@@ -685,13 +685,15 @@ function App() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
           <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">Sổ Nợ</span>
         </button>
-        <button 
-          onClick={() => setActiveTab('shopee')}
-          className={`flex items-center gap-2 px-4 md:px-6 py-2.5 rounded-full transition-all ${activeTab === 'shopee' ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/40 scale-105' : 'text-slate-500 hover:text-white'}`}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
-          <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">Săn Sale</span>
-        </button>
+        {import.meta.env.DEV && (
+          <button 
+            onClick={() => setActiveTab('shopee')}
+            className={`flex items-center gap-2 px-4 md:px-6 py-2.5 rounded-full transition-all ${activeTab === 'shopee' ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/40 scale-105' : 'text-slate-500 hover:text-white'}`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+            <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">Săn Sale</span>
+          </button>
+        )}
       </nav>
 
       {isModalOpen && (
