@@ -541,7 +541,7 @@ function App() {
                           <div className="flex gap-3">
                             <button 
                               onClick={() => toggleDebtPaid(debt.id)}
-                              className={`flex-1 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all ${debt.paid ? 'bg-slate-200 text-slate-500' : 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/30 hover:bg-emerald-400'}`}
+                              className={`flex-1 py-4 px-2 rounded-full text-[10px] font-black uppercase tracking-normal leading-tight whitespace-normal text-center transition-all ${debt.paid ? 'bg-slate-200 text-slate-500' : 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/30 hover:bg-emerald-400'}`}
                             >
                               {debt.paid ? 'Chưa trả' : 'Đã trả xong'}
                             </button>
@@ -906,25 +906,25 @@ function App() {
                                   </div>
                                 ) : (
                                   <>
-                                    <div className="flex items-center gap-4">
-                                       <div className="w-2 h-10 bg-orange-500 rounded-full opacity-20"></div>
-                                       <div>
-                                          <p className="text-base font-black text-slate-800">{exp.name}</p>
-                                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                                    <div className="flex items-start gap-3 w-full">
+                                       <div className="w-2 h-8 bg-orange-500 rounded-full opacity-20 mt-1 shrink-0"></div>
+                                       <div className="flex-1 min-w-0">
+                                          <p className="text-sm font-black text-slate-800 leading-tight">{exp.name}</p>
+                                          <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">
                                             {new Date(exp.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                                           </p>
+                                          <div className="flex items-center gap-2 mt-2">
+                                            <span className="text-base font-black tabular-nums text-slate-800">{formatCurrency(exp.amount, 'đ')}</span>
+                                            <div className="flex gap-1.5">
+                                              <button onClick={() => startEdit(exp)} className="p-2 bg-indigo-50 text-indigo-500 rounded-full hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                                              </button>
+                                              <button onClick={() => deleteExpense(exp.id)} className="p-2 bg-red-50 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-sm">
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                              </button>
+                                            </div>
+                                          </div>
                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-5">
-                                      <span className="text-lg font-black tabular-nums text-slate-800">{formatCurrency(exp.amount, 'đ')}</span>
-                                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                                        <button onClick={() => startEdit(exp)} className="p-2.5 bg-indigo-50 text-indigo-500 rounded-full hover:bg-indigo-500 hover:text-white transition-all shadow-sm">
-                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                                        </button>
-                                        <button onClick={() => deleteExpense(exp.id)} className="p-2.5 bg-red-50 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-sm">
-                                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                        </button>
-                                      </div>
                                     </div>
                                   </>
                                 )}
