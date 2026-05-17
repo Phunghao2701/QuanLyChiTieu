@@ -45,11 +45,17 @@ function App() {
   const [shopeeName, setShopeeName] = useState('');
   const [shopeeTargetDisplay, setShopeeTargetDisplay] = useState('');
 
-  // States for Editing
+  // States for Editing expenses
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState('');
+  const [editAmountDisplay, setEditAmountDisplay] = useState('');
   const [editCategory, setEditCategory] = useState('other');
   const [isAddingInModal, setIsAddingInModal] = useState(false);
+
+  // States for Editing debts
+  const [editingDebtId, setEditingDebtId] = useState(null);
+  const [editDebtAmountDisplay, setEditDebtAmountDisplay] = useState('');
+  const [editDebtNote, setEditDebtNote] = useState('');
 
   // State for expanded categories in Modal
   const [expandedCategories, setExpandedCategories] = useState({});
@@ -149,6 +155,29 @@ function App() {
     setDebts(debts.filter(d => d.id !== id));
   };
 
+  const startEditDebt = (debt) => {
+    setEditingDebtId(debt.id);
+    setEditDebtAmountDisplay(new Intl.NumberFormat('en-US').format(debt.amount));
+    setEditDebtNote(debt.note || '');
+  };
+
+  const cancelEditDebt = () => {
+    setEditingDebtId(null);
+    setEditDebtAmountDisplay('');
+    setEditDebtNote('');
+  };
+
+  const saveEditDebt = (id) => {
+    const rawAmount = editDebtAmountDisplay.replace(/,/g, '');
+    if (!rawAmount) return;
+    setDebts(debts.map(d =>
+      d.id === id
+        ? { ...d, amount: Math.abs(parseFloat(rawAmount)), note: editDebtNote }
+        : d
+    ));
+    cancelEditDebt();
+  };
+
   const deleteExpense = (id) => {
     setExpenses(expenses.filter(exp => exp.id !== id));
   };
@@ -181,6 +210,7 @@ function App() {
   const totals = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     const dDay = now.getDay();
     const diff = now.getDate() - dDay + (dDay === 0 ? -6 : 1);
     const startOfWeek = new Date(new Date().setDate(diff));
@@ -189,6 +219,8 @@ function App() {
 
     return expenses.reduce((acc, exp) => {
       const expDate = new Date(exp.date);
+      // Bỏ qua các chi tiêu được ghi vào ngày tương lai
+      if (expDate > endOfToday) return acc;
       if (expDate >= today) acc.today += exp.amount;
       if (expDate >= startOfWeek) acc.week += exp.amount;
       if (expDate >= startOfMonth) acc.month += exp.amount;
@@ -472,25 +504,61 @@ function App() {
                           </div>
                           <p className={`text-xl font-black tabular-nums tracking-tight ${debt.paid ? 'text-slate-400' : 'text-orange-600'}`}>{formatCurrency(debt.amount)}</p>
                         </div>
-                        
-                        {debt.note && (
-                          <p className="text-xs text-slate-500 font-black bg-slate-50 p-4 rounded-2xl mb-6 italic border border-slate-100/50">"{debt.note}"</p>
+
+                        {/* Inline edit form */}
+                        {editingDebtId === debt.id ? (
+                          <div className="space-y-3 mb-4 animate-in slide-in-from-top-2 duration-200">
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Số tiền mới</label>
+                              <input
+                                type="text"
+                                value={editDebtAmountDisplay}
+                                onChange={(e) => handleAmountChange(e, setEditDebtAmountDisplay)}
+                                className="w-full bg-orange-50 border-2 border-orange-200 rounded-2xl px-5 py-3 focus:outline-none focus:border-orange-500 text-sm font-black font-mono"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Ghi chú</label>
+                              <textarea
+                                value={editDebtNote}
+                                onChange={(e) => setEditDebtNote(e.target.value)}
+                                rows={2}
+                                className="w-full bg-orange-50 border-2 border-orange-200 rounded-2xl px-5 py-3 focus:outline-none focus:border-orange-500 text-sm font-black resize-none"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => saveEditDebt(debt.id)} className="flex-1 bg-orange-500 text-white py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/30">Lưu</button>
+                              <button onClick={cancelEditDebt} className="flex-1 bg-slate-100 text-slate-400 py-3 rounded-full text-[10px] font-black uppercase tracking-widest">Hủy</button>
+                            </div>
+                          </div>
+                        ) : (
+                          debt.note && (
+                            <p className="text-xs text-slate-500 font-black bg-slate-50 p-4 rounded-2xl mb-4 italic border border-slate-100/50">"{debt.note}"</p>
+                          )
                         )}
 
-                        <div className="flex gap-3">
-                          <button 
-                            onClick={() => toggleDebtPaid(debt.id)}
-                            className={`flex-1 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all ${debt.paid ? 'bg-slate-200 text-slate-500' : 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/30 hover:bg-emerald-400'}`}
-                          >
-                            {debt.paid ? 'Chưa trả' : 'Đã trả xong'}
-                          </button>
-                          <button 
-                            onClick={() => deleteDebt(debt.id)}
-                            className="w-14 h-14 flex items-center justify-center bg-red-50 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                          </button>
-                        </div>
+                        {editingDebtId !== debt.id && (
+                          <div className="flex gap-3">
+                            <button 
+                              onClick={() => toggleDebtPaid(debt.id)}
+                              className={`flex-1 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all ${debt.paid ? 'bg-slate-200 text-slate-500' : 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/30 hover:bg-emerald-400'}`}
+                            >
+                              {debt.paid ? 'Chưa trả' : 'Đã trả xong'}
+                            </button>
+                            <button 
+                              onClick={() => startEditDebt(debt)}
+                              className="w-14 h-14 flex items-center justify-center bg-indigo-50 text-indigo-500 rounded-full hover:bg-indigo-500 hover:text-white transition-all shadow-sm"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                            <button 
+                              onClick={() => deleteDebt(debt.id)}
+                              className="w-14 h-14 flex items-center justify-center bg-red-50 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
